@@ -9,7 +9,7 @@ import argparse
 from xml.sax.saxutils import unescape
 
 parser = argparse.ArgumentParser(description='Extract talk pages associated to one or more Wikipedia articles through the API')
-parser.add_argument('-l', action="store", dest="article_list", default="article_ids_titles.csv", 
+parser.add_argument('-l', action="store", dest="article_list", default="../article_ids_titles.csv", 
 					help="""
 					A file containing the list of articles to be scraped through Wikipedia API (one article title per line, with id and title separated by tab)
 					""")
@@ -37,6 +37,7 @@ redirectP = re.compile(r'#REDIRECT \[\[(.*)\]\]')
 
 sleep_time = 0
 
+verbose = True
 debug = True
 debug_more = False
 
@@ -165,7 +166,7 @@ def wiki_discussion_scraper(article_title):
 			if archive_pattern + str(i) not in archive_pages and archive_pattern.replace('_', ' ') + str(i) not in archive_pages:
 				archive_pages.append(archive_pattern + str(i))
 			else:
-				if debug: print '\tSkipped repeated archive page: ' + archive_pattern + str(i)
+				if debug_more: print '\tSkipped repeated archive page: ' + archive_pattern + str(i)
 				if write_log: log.write('\n\tSkipped repeated archive page: ' + archive_pattern + str(i) )
 			
 			i += 1	
@@ -176,13 +177,14 @@ def wiki_discussion_scraper(article_title):
 	else: 
 		if write_log: log.write('\n\t\tNot found: ' + archive_pattern + str(i) ) 
 	
-	
+	n_archives_written = 0
 	processed_archives = []
 	for a in archive_pages:		
 		if a not in processed_archives and string.replace(a, '_', ' ') not in processed_archives:		
 			id, title, wiki_text = get_wikitext_xml(a)
 			if id > 0:
 				xml += xml_template % (id, title, wiki_text)
+				n_archives_written += 1
 			else:
 				if debug: print '     Could not access archive %s' % a
 				if write_log: log.write('\n     Could not access archive %s' % a )
@@ -191,7 +193,8 @@ def wiki_discussion_scraper(article_title):
 					error_log.flush()
 		processed_archives.append(a)
 		processed_archives.append(string.replace(a, '_', ' '))
-			
+	
+	if verbose or debug: print "   %s: written current talk page and %d archive pages" %(article_title, n_archives_written)	
 	xml += 	last_xml	
 	xml += "</article>"
 	
@@ -223,7 +226,7 @@ if __name__ == '__main__':
 	
 	titles = load_id_list_from_file(args.article_list)  
 	for id in sorted(titles):
-		if debug: print '\nProcessing article: ' + str(id) + ' ' + str(titles[id])
+		if verbose or debug: print '\nProcessing article: ' + str(id) + ' ' + str(titles[id])
 		if write_log: 
 			try:
 				log.write('\n\n' + str(id) + ' ' + str(titles[id]) )
